@@ -8,6 +8,7 @@ var program = require('commander');
 var mkdirp = require('mkdirp');
 var chalk = require('chalk');
 var pug = require('pug');
+var matter = require('gray-matter');
 
 var basename = path.basename;
 var dirname = path.dirname;
@@ -253,9 +254,18 @@ function renderFile(path, rootPath) {
     if (program.nameAfterFile) {
       options.name = getNameFromFileName(path);
     }
+    
+    let page = matter.read(path);
+    options.filename = page.path;
+    if(page.data.layout){
+      page.content = `extends _layouts/${page.data.layout}
+${page.content}`;
+    }
+    options.page = page;
+
     var fn = options.client
-           ? pug.compileFileClient(path, options)
-           : pug.compileFile(path, options);
+           ? pug.compileClient(page.content, options)
+           : pug.compile(page.content, options);
     if (program.watch && fn.dependencies) {
       // watch dependencies, and recompile the base
       fn.dependencies.forEach(function (dep) {
